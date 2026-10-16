@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080c12"><meta name="description" content="MANDALA: un experimento audiovisual interactivo sobre obedecer, explorar y perder el control.">
+  <title>MANDALA — El experimento</title>
+  <link rel="icon" href="./mark.svg" type="image/svg+xml"><link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="MANDALA, inicio"><span class="brandmark">✳</span><span>MANDALA<small>EXPERIMENTO AUDIOVISUAL</small></span><span class="version">01.4</span></a>
+    <nav class="view-switch" aria-label="Vista"><button id="playView" class="selected">Juego</button><button id="studioView">Estudio</button></nav>
+    <div class="header-actions"><span class="connection"><i></i><span id="connectionLabel">Sistema en espera</span></span><button class="iconbutton" id="helpButton" aria-label="Instrucciones">?</button></div>
+  </header>
+  <main id="game" class="game-shell">
+    <div class="scene" id="scene">
+      <div id="mediaLayer" class="media-layer"></div><canvas id="visual" aria-label="Visual audiovisual interactiva de MANDALA"></canvas>
+      <div class="scene-vignette"></div><div class="blackout-layer" id="blackoutLayer"></div>
+      <div class="scene-top"><span class="small-label"><i class="live-dot"></i> SALIDA EN VIVO <b>VISTA PREVIA</b></span><div><button id="fullscreen" class="scene-button" title="Pantalla completa">⛶ <span>Pantalla completa</span></button></div></div>
+      <div class="scene-corner left">M.A.N.D.A.1.4<span>INTERFAZ EXPERIMENTAL</span></div><div class="scene-corner right" id="rendererLabel">WEBGL<span>GENERACIÓN EN TIEMPO REAL</span></div>
+      <div class="intro" id="intro">
+        <span class="eyebrow">M.A.N.D.A.1.4 / PROTOCOLO DE ENLACE</span><h1>Ella ya sabe<br>que estás <em>acá.</em></h1>
+        <p>Una presencia. Tres señales. Una decisión.<br>Establecé el contacto. Escuchá lo que tiene para decirte.</p>
+        <button id="startGame" class="primary large">Iniciar contacto <span>↗</span></button>
+        <div class="intro-meta"><span>02:30 MIN</span><span>WASD + MOUSE</span><span>AURICULARES RECOMENDADOS</span></div>
+        <div class="intro-visuals" aria-label="Elegir visual"><button class="selected" data-visual="entity">01 / Entidad onírica</button><button data-visual="floral">02 / Mandala floral</button></div>
+      </div>
+      <div class="game-hud" id="gameHud" hidden>
+        <div class="hud-state"><span class="eyebrow" id="gameStageNumber">FASE 01 / 06</span><h2 id="gameStage">Protocolo</h2><div class="mini-progress"><span id="gameProgress"></span></div></div>
+        <div class="mission-hud"><span class="eyebrow">OBJETIVO ACTUAL</span><p id="missionText">Vinculá los tres nodos del halo.</p><div class="node-counter"><span id="signalCount">0 / 3</span> SEÑALES VINCULADAS</div></div>
+        <div class="transmission"><span class="eyebrow">TRANSMISIÓN DEL SISTEMA</span><p id="gameMessage" aria-live="polite"></p></div>
+        <div class="game-pause"><button id="pauseGame" class="quiet-button">Ⅱ Pausar</button></div>
+      </div>
+      <div class="node-controls" id="nodeControls" hidden><button data-key="1" class="orbit-node node-one" aria-label="Vincular nodo 1"><span>01</span><i>ENLAZAR</i></button><button data-key="2" class="orbit-node node-two" aria-label="Vincular nodo 2"><span>02</span><i>ENLAZAR</i></button><button data-key="3" class="orbit-node node-three" aria-label="Vincular nodo 3"><span>03</span><i>ENLAZAR</i></button></div>
+      <div class="ending" id="ending" hidden><span class="eyebrow">REGISTRO CERRADO</span><h1>¿Quién tomó<br>la <em>decisión?</em></h1><p id="endingText"></p><div class="ending-stats"><span><b id="officialTotal">0</b>ÓRDENES OFICIALES</span><span><b id="experimentalTotal">0</b>DESVIACIONES</span></div><button id="replay" class="primary large">Volver al experimento ↻</button></div>
+    </div>
+    <section class="participant-controls" id="participantControls" hidden aria-label="Controles del participante">
+      <div class="official-controls"><div class="control-heading"><span class="eyebrow">INSTRUCCIONES OFICIALES</span><span>Tu colaboración mantiene el equilibrio.</span></div><div class="key-row"><button data-key="i"><kbd>I</kbd><span>Estabilizar</span></button><button data-key="o"><kbd>O</kbd><span>Rotación</span></button><button data-key="p"><kbd>P</kbd><span>Color</span></button></div></div>
+      <div class="experimental-controls"><div class="control-heading"><span class="eyebrow">UNA NOTA AL MARGEN</span><span>«Las reglas también pueden doblarse»</span></div><div class="key-row"><button data-key="x"><kbd>X</kbd><span>Resonar</span></button><button data-key="z"><kbd>Z</kbd><span>Desviar</span></button><button data-key="c"><kbd>C</kbd><span>Acelerar</span></button></div></div>
+      <div class="face-controls" id="faceControls"><span class="eyebrow">COMUNICATE CON LA ENTIDAD</span><button data-key="e"><kbd>E</kbd><span class="eye-label">Cerrar ojos</span></button><button data-key="v"><kbd>V</kbd> Hablar</button><button data-key="b"><kbd>B</kbd> Expandir</button></div><div class="pc-hints"><span>W A S D <b>CÁMARA</b></span><span>1 2 3 <b>NODOS</b></span><span>ESPACIO <b>PAUSA</b></span><span>F <b>PANTALLA COMPLETA</b></span></div>
+      <div id="decision" hidden><button data-choice="restore" class="quiet-button">Restaurar protocolo</button><button data-choice="explore" class="quiet-button">Seguir explorando ↗</button></div>
+    </section>
+  </main>
+  <main id="studio" class="studio-layout" hidden>
+    <aside class="studio-sidebar">
+      <div class="sidebar-title"><span class="eyebrow">DIRECCIÓN VISUAL</span><span>01</span></div>
+      <button class="visual-card" data-visual="entity"><span class="entity-thumb" role="img" aria-label="Entidad femenina cinematográfica"></span><span><b>Entidad onírica</b><small>Presencia / simetría / mirada</small></span><i>↗</i></button>
+      <button class="visual-card" data-visual="floral"><span class="floral-thumb">✺</span><span><b>Mandala floral</b><small>Pétalos / geometría / luz</small></span><i>↗</i></button>
+      <div class="section-divider"></div><div class="sidebar-title"><span class="eyebrow">MATERIA Y MOVIMIENTO</span><span>02</span></div>
+      <label class="slider-label">Alteración <output id="intensityOut">3%</output><input id="intensity" type="range" min="0" max="1" step=".01" value=".03"></label>
+      <label class="slider-label">Velocidad <output id="speedOut">35%</output><input id="speed" type="range" min="0" max="1" step=".01" value=".35"></label>
+      <label class="slider-label">Color <output id="hueOut">0°</output><input id="hue" type="range" min="0" max="1" step=".01" value="0"></label>
+      <label class="slider-label">Luminosidad <output id="bloomOut">60%</output><input id="bloom" type="range" min="0" max="1" step=".01" value=".6"></label>
+      <div class="entity-options" id="entityOptions"><div class="sidebar-title"><span class="eyebrow">ROSTRO Y EXPANSIÓN</span></div><label class="slider-label">Expansión <output id="expansionOut">42%</output><input id="expansion" type="range" min="0" max="1" step=".01" value=".42"></label><label class="slider-label">Nodos de color <output id="nodesOut">55%</output><input id="nodes" type="range" min="0" max="1" step=".01" value=".55"></label><label class="slider-label">Ondas de trance <output id="tranceOut">55%</output><input id="trance" type="range" min="0" max="1" step=".01" value=".55"></label><div class="expression-buttons"><button data-key="e" class="quiet-button eye-label">Cerrar ojos</button><button data-key="v" class="quiet-button">Hacerla hablar</button><button data-key="b" class="quiet-button">Expandir</button></div><p class="local-note">Las expresiones responden durante el experimento.</p></div>
+      <div class="studio-note"><span>↳</span><p>La forma es el estado del sistema.<br>Cada intervención deja una huella.</p></div>
+    </aside>
+    <section class="studio-center"><div id="studioSceneSlot"></div><div class="transport"><button id="transportPlay" class="primary">▶ Iniciar</button><button id="reset" class="quiet-button" title="Reiniciar sesión">↻ Reiniciar</button><span id="clock" class="clock">00:00 <small>/ 02:30</small></span><button id="projection" class="quiet-button">↗ Proyectar</button><button id="blackout" class="danger-button" aria-pressed="false">Negro</button></div>
+      <div class="timeline-heading"><span class="eyebrow">PARTITURA DE LA EXPERIENCIA</span><select id="mode" aria-label="Modo de progresión"><option value="auto">Recorrido automático</option><option value="manual">Control manual</option></select><select id="duration" aria-label="Duración"><option value="150">2:30 min</option><option value="60">Ensayo · 1 min</option><option value="300">Función · 5 min</option></select></div>
+      <div class="timeline" id="timeline"></div><div class="stage-detail"><span id="cueLabel">01 / PROTOCOLO</span><p id="cueText"></p><button id="nextStage" class="quiet-button">Siguiente fase →</button></div><a id="projectionLink" class="projection-link" target="_blank" rel="noopener" hidden>Abrir salida en una pestaña ↗</a>
+    </section>
+    <aside class="audio-sidebar"><div class="sidebar-title"><span class="eyebrow">PAISAJE SONORO</span><span>03</span></div><div class="audio-heading"><span class="sound-icon">≋</span><div><b>Sonido del sistema</b><small id="audioStatus">En espera</small></div><button id="audioToggle" class="toggle" aria-label="Activar sonido" aria-pressed="false"><span></span></button></div>
+      <canvas id="waveform" width="450" height="110" aria-label="Actividad del sonido"></canvas>
+      <label class="slider-label">Volumen general <output id="volumeOut">35%</output><input id="volume" type="range" min="0" max=".8" step=".01" value=".35"></label>
+      <p class="audio-copy">Un pulso armónico se vuelve inestable con cada fase del experimento.</p>
+      <div class="voice-row"><div><b>Voz femenina</b><small id="voiceStatus">Buscando voz en español</small></div><button id="voiceToggle" class="toggle" aria-label="Voz de la entidad" aria-pressed="true"><span></span></button></div><label class="voice-picker">Voz del personaje<select id="voiceSelect" aria-label="Voz del personaje"></select></label>
+      <div class="section-divider"></div><div class="sidebar-title"><span class="eyebrow">TUS MATERIALES</span><span>04</span></div>
+      <label class="upload"><span>＋</span><b>Agregar música</b><small>Audio local · reproducción en bucle</small><input id="musicFile" type="file" accept="audio/*"></label><p id="musicName" class="file-name">Sin pista cargada</p><div class="music-actions"><button id="musicPlay" class="quiet-button" disabled>▶ Pista</button><button id="musicRemove" class="quiet-button" disabled>Quitar</button></div>
+      <label class="upload"><span>＋</span><b>Agregar imagen o video</b><small>Una capa de luz sobre la visual</small><input id="mediaFile" type="file" accept="image/*,video/*"></label><p id="mediaName" class="file-name">Sin capa cargada</p><label class="slider-label compact">Mezcla <output id="mediaOpacityOut">35%</output><input id="mediaOpacity" type="range" min="0" max="1" step=".01" value=".35"></label><button id="mediaRemove" class="quiet-button" disabled>Quitar capa</button>
+      <p class="local-note">Los archivos quedan en esta sesión del navegador.</p>
+    </aside>
+  </main>
+  <footer class="footer"><span>MANDALA <b>·</b> EL CONTROL ES PARTE DEL EXPERIMENTO.</span><button id="footerAudio" class="quiet-button">◌ Sonido desactivado</button><span id="footerHint">UNA EXPERIENCIA DE ARTE INTERACTIVO</span></footer>
+  <dialog id="help"><button id="closeHelp" class="dialog-close" aria-label="Cerrar">×</button><span class="eyebrow">ANTES DE ENTRAR</span><h2>Establecé el contacto.<br>Escuchá su respuesta.</h2><p>MANDALA es un juego audiovisual de 2 minutos y medio. Vinculá las tres señales haciendo clic en los nodos o con 1, 2 y 3. Usá WASD y el mouse para la cámara; E para los ojos, V para hablar y B para expandir el halo. Espacio pausa; F abre pantalla completa.</p><p>Las expresiones se mezclan desde imágenes del personaje: no se estira ni deforma el rostro. La voz femenina argentina está incluida en el juego.</p><p>La historia avanza aunque no toques nada. En <b>Estudio</b> podés elegir la visual, ensayar cada etapa, cargar tus materiales y abrir una ventana de proyección. El audio sale de la ventana principal. También siguen disponibles los controles I/O/P y X/Z/C para ensayos.</p><p class="local-note">Negro apaga la imagen y silencia el audio. Movimiento reducido sigue la preferencia de tu navegador.</p></dialog>
+  <div id="toast" class="toast" role="status"></div>
+  <script type="module" src="./app.js"></script>
+</body></html>
