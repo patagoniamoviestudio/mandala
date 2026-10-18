@@ -1,4 +1,5 @@
 import {facePose} from './face-motion.js';
+import {groove} from './groove.js';
 const TAU=Math.PI*2;
 function petal(ctx,inner,outer,width){
   const d=outer-inner;
@@ -45,7 +46,7 @@ function mandalaTexture(){
   return c;
 }
 const fragment=`precision mediump float;
-uniform vec2 res,camera;uniform float time,level,hue,bloom,style,speed,fade,eyeClose,mouthOpen,expansion,nodes,trance,cameraZoom,audioEnergy,charge,triggerTime;uniform sampler2D art;
+uniform vec4 layers1,layers2;uniform vec2 res,camera;uniform float time,level,hue,bloom,style,speed,fade,eyeClose,mouthOpen,expansion,nodes,trance,cameraZoom,audioEnergy,charge,triggerTime,loopPulse,touch;uniform sampler2D art;
 vec3 spectrum(float t){return .52+.48*cos(t+vec3(0.,2.094,4.188));}
 vec3 hueRotate(vec3 c,float a){vec3 k=normalize(vec3(1.));return c*cos(a)+cross(k,c)*sin(a)+k*dot(k,c)*(1.-cos(a));}
 float segment(vec2 p,vec2 a,vec2 b){vec2 q=p-a,v=b-a;return length(q-v*clamp(dot(q,v)/dot(v,v),0.,1.));}
@@ -119,7 +120,7 @@ void main(){
  // Psychedelic light lives in its own spatial field; it never warps portrait UVs.
  vec2 root=p-vec2(0.,.14);float radial=length(root),angle=atan(root.y,root.x);
  float faceProtect=exp(-pow(p.x/.43,4.)-pow((p.y+.02)/.66,4.));
- float surround=1.-faceProtect*.88;
+ float surround=1.-faceProtect*.86;
  float petals=sin(angle*16.+time*.12+sin(angle*8.+time*.07)*trance*.4);
  float rings=sin(log(1.+radial)*18.-time*(.35+speed*.2)+petals*(.35+expansion*.3));
  float lace=exp(-abs(rings)*27.);
@@ -130,13 +131,49 @@ void main(){
    z*=1.22;
  }
  vec3 aurora=spectrum(angle*1.5+radial*5.-time*.14+hue*6.283);
- float strength=.24+trance*.45+charge*.35+audioEnergy*.5;
- c+=aurora*(lace*.42+lattice*.7)*surround*strength; c+=spectrum(hue*6.283+radial*.7)*exp(-pow(radial-1.2,2.)*1.5)*.025*trance;
+ float strength=.65+trance*.75+charge*.3+audioEnergy*.3+loopPulse*.22+touch*.25;
+ c+=aurora*(lace*.65+lattice*.95)*surround*strength; c+=spectrum(hue*6.283+radial*.7)*exp(-pow(radial-1.2,2.)*1.5)*.025*trance;
+ // Each persistent frequency adds a separate spatial layer, with smooth envelopes.
+ float outer=1.-faceProtect*.97;
+ float travel=time*(.13+speed*.12);
+ // S: liquid logarithmic spirals, travelling around the portrait.
+ float spiral=sin(angle*7.+log(.25+radial)*11.-travel*3.);
+ float silk=exp(-abs(spiral)*17.);
+ c+=spectrum(radial*4.-angle*2.+hue*6.283+time*.12)*silk*(.10+layers1.y*.9)*outer;
+ // F: a deep, moving tunnel with perspective-scaled polygonal cells.
+ float tunnel=sin(11./(.27+radial)+travel*5.+sin(angle*8.)*.6);
+ float ribs=pow(.5+.5*cos(angle*24.+time*.08),18.);
+ c+=spectrum(radial*8.-time*.2+hue*6.283)*exp(-abs(tunnel)*19.)*(.1+layers1.w*.85)*outer;
+ c+=vec3(.4,.85,1.)*ribs*exp(-radial*.5)*layers1.w*.12*outer;
+ // Q: wide ribbons of coloured aurora across the entire scene.
+ float ribbon=sin(root.x*3.2+sin(root.y*2.4+travel)*1.5+travel);
+ c+=spectrum(root.x*2.+root.y*3.+time*.2+hue*6.283)*pow(.5+.5*ribbon,7.)*(.06+layers2.x*.42)*surround;
+ // W: crystalline kaleidoscope, independently rotating star tessellations.
+ float star=abs(cos(angle*12.+sin(radial*4.-travel)))*radial;
+ float crystal=exp(-abs(sin(star*13.-travel*2.))*24.);
+ c+=spectrum(star*7.+hue*6.283-time*.1)*crystal*(.08+layers2.y*.75)*outer;
+ // D: orbiting lights and connecting constellations, separate from the face.
+ for(int n=0;n<24;n++){
+   float id=float(n),a=id*2.39996+time*.055;
+   float rad=.77+mod(id,4.)*.24+sin(time*.3+id)*.035;
+   vec2 beadPos=vec2(cos(a)*rad,sin(a)*rad*.8+.14);
+   float bd=length(root-beadPos);
+   c+=spectrum(id*.73+hue*6.283)*(.0002/(bd*bd+.00035))*(.15+layers1.z*.9)*outer;
+ }
+ // E: a luminous lotus above the brow accompanies the closing eyelids.
+ vec2 lotus=root-vec2(0.,.48);float lr=length(lotus),la=atan(lotus.y,lotus.x);
+ float lotusLine=exp(-abs(lr-(.15+.07*cos(la*8.+time*.13)))*180.);
+ c+=spectrum(la+time*.1+hue*6.283)*lotusLine*layers2.z*.8;
+ // R: layered expanding waves; A: warm light with a slow breathing envelope.
+ float ripple=exp(-abs(sin(radial*15.-time*1.4))*22.);
+ c+=spectrum(radial*3.+hue*6.283)*ripple*layers2.w*.75*outer;
+ c+=vec3(.19,.105,.025)*layers1.x*(.75+.25*sin(time*.6))*surround;
  float pulseRadius=.2+triggerTime*.8;
  float pulse=exp(-pow((radial-pulseRadius)/.018,2.))*(1.-smoothstep(2.,3.2,triggerTime));
  c+=spectrum(hue*6.283+radial*4.)*pulse*surround*.32;
  vec3 movingLight=mix(vec3(.75,.94,1.15),vec3(1.12,.84,1.03),.5+.5*sin(angle+time*.19+hue*6.283));
  c*=mix(vec3(1.),movingLight,.12+charge*.35+audioEnergy*.15);
+ c+=spectrum(hue*6.283+radial*4.)*exp(-pow(radial-(.45+loopPulse*.14),2.)*80.)*loopPulse*.07*surround;
  float vignette=1.-smoothstep(.4,2.7,r)*.28;
  c=max(c,vec3(0.));c=c/(1.+c*.12);
  gl_FragColor=vec4(c*vignette*(1.-fade),1.);
@@ -144,21 +181,23 @@ void main(){
 export class Visuals{
   constructor(canvas){
     this.canvas=canvas;this.floral=mandalaTexture();this.entity=null;this.lastStyle='';this.failed=false;
-    const img=new Image();img.onload=()=>{this.entity=img;this.lastStyle='';};img.onerror=()=>{this.failed=true;};img.src=new URL('./assets/entity-cinematic-atlas.png',import.meta.url).href;
+    const img=new Image();img.onload=()=>{this.entity=img;this.lastStyle='';};img.onerror=()=>{this.failed=true;};img.src=new URL('./assets/entity-human-atlas.png',import.meta.url).href;
     this.gl=canvas.getContext('webgl',{alpha:false,antialias:false,powerPreference:'high-performance'});
     if(this.gl){
       const g=this.gl;const shader=(type,source)=>{const s=g.createShader(type);g.shaderSource(s,source);g.compileShader(s);if(!g.getShaderParameter(s,g.COMPILE_STATUS))throw Error(g.getShaderInfoLog(s));return s;};
       this.program=g.createProgram();g.attachShader(this.program,shader(g.VERTEX_SHADER,'attribute vec2 pos;void main(){gl_Position=vec4(pos,0.,1.);}'));g.attachShader(this.program,shader(g.FRAGMENT_SHADER,fragment));g.linkProgram(this.program);if(!g.getProgramParameter(this.program,g.LINK_STATUS))throw Error(g.getProgramInfoLog(this.program));g.useProgram(this.program);
       const b=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,b);g.bufferData(g.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),g.STATIC_DRAW);const a=g.getAttribLocation(this.program,'pos');g.enableVertexAttribArray(a);g.vertexAttribPointer(a,2,g.FLOAT,false,0,0);
-      this.texture=g.createTexture();g.bindTexture(g.TEXTURE_2D,this.texture);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);this.loc={};for(const k of ['res','time','level','hue','bloom','style','speed','fade','eyeClose','mouthOpen','expansion','nodes','trance','camera','cameraZoom','audioEnergy','charge','triggerTime'])this.loc[k]=g.getUniformLocation(this.program,k);
+      this.texture=g.createTexture();g.bindTexture(g.TEXTURE_2D,this.texture);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);this.loc={};for(const k of ['res','time','level','hue','bloom','style','speed','fade','eyeClose','mouthOpen','expansion','nodes','trance','camera','cameraZoom','audioEnergy','charge','triggerTime','layers1','layers2','loopPulse','touch'])this.loc[k]=g.getUniformLocation(this.program,k);
     }else this.ctx=canvas.getContext('2d');
     this.resize=new ResizeObserver(()=>this.size());this.resize.observe(canvas);this.size();
   }
-  size(){const d=Math.min(devicePixelRatio||1,1.5);this.canvas.width=Math.max(1,Math.round(this.canvas.clientWidth*d));this.canvas.height=Math.max(1,Math.round(this.canvas.clientHeight*d));if(this.gl)this.gl.viewport(0,0,this.canvas.width,this.canvas.height);}
+  size(){const d=Math.min(devicePixelRatio||1,1.5,Math.sqrt(2100000/Math.max(1,this.canvas.clientWidth*this.canvas.clientHeight)));this.canvas.width=Math.max(1,Math.round(this.canvas.clientWidth*d));this.canvas.height=Math.max(1,Math.round(this.canvas.clientHeight*d));if(this.gl)this.gl.viewport(0,0,this.canvas.width,this.canvas.height);}
   draw(s,t,fade=0){
     const entity=s.visual==='entity'&&this.entity;const source=entity?this.entity:this.floral;
-    const pose=facePose(s,t);const now=performance.now(),dt=Math.min(.08,(now-(this.previousFrame??now-16))/1000);this.previousFrame=now;const smooth=1-Math.exp(-dt*15);this.eyePosition=(this.eyePosition??0)+(pose.eyes-(this.eyePosition??0))*smooth;this.mouthPosition=(this.mouthPosition??0)+(pose.mouth-(this.mouthPosition??0))*smooth;this.camX=(this.camX??0)+((s.lookX||0)-(this.camX??0))*(1-Math.exp(-dt*3));this.camY=(this.camY??0)+((s.lookY||0)-(this.camY??0))*(1-Math.exp(-dt*3));this.camZoom=(this.camZoom??0)+((s.cameraZoom||0)-(this.camZoom??0))*(1-Math.exp(-dt*4));this.motion??={};for(const key of ['hue','bloom','nodes','trance','expansion','speed','audioEnergy']){const target=key==='expansion'?pose.expansion:(s[key]??0);this.motion[key]??=target;let delta=target-this.motion[key];if(key==='hue'){if(delta>.5)delta-=1;if(delta<-.5)delta+=1;}this.motion[key]+=delta*(1-Math.exp(-dt*(key==='audioEnergy'?8:2.8)));}this.charge=(this.charge??0)+(Math.min(1,(s.activeKeys?.length||0)/4)-(this.charge??0))*(1-Math.exp(-dt*3));
-    if(this.gl){const g=this.gl;g.useProgram(this.program);g.bindTexture(g.TEXTURE_2D,this.texture);const style=entity?'entity':'floral';if(this.lastStyle!==style){g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,source);this.lastStyle=style;}g.uniform2f(this.loc.res,this.canvas.width,this.canvas.height);for(const [k,v]of Object.entries({time:t,level:s.intensity,hue:this.motion.hue,bloom:this.motion.bloom,style:entity?1:0,speed:this.motion.speed,fade,eyeClose:this.eyePosition,mouthOpen:this.mouthPosition,expansion:this.motion.expansion,nodes:this.motion.nodes,trance:this.motion.trance,cameraZoom:this.camZoom,audioEnergy:this.motion.audioEnergy,charge:this.charge,triggerTime:Math.max(0,s.time-(s.triggerAt??-100))}))g.uniform1f(this.loc[k],v);g.uniform2f(this.loc.camera,this.camX,this.camY);g.drawArrays(g.TRIANGLES,0,6);
+    const pose=facePose(s,t);const now=performance.now(),dt=Math.min(.08,(now-(this.previousFrame??now-16))/1000);this.previousFrame=now;const smooth=1-Math.exp(-dt*15);this.eyePosition=(this.eyePosition??0)+(pose.eyes-(this.eyePosition??0))*smooth;this.mouthPosition=(this.mouthPosition??0)+(pose.mouth-(this.mouthPosition??0))*smooth;this.camX=(this.camX??0)+((s.lookX||0)-(this.camX??0))*(1-Math.exp(-dt*3));this.camY=(this.camY??0)+((s.lookY||0)-(this.camY??0))*(1-Math.exp(-dt*3));this.camZoom=(this.camZoom??0)+((s.cameraZoom||0)-(this.camZoom??0))*(1-Math.exp(-dt*4));this.motion??={};for(const key of ['hue','bloom','nodes','trance','expansion','speed','audioEnergy']){const target=key==='expansion'?pose.expansion:(s[key]??0);this.motion[key]??=target;let delta=target-this.motion[key];if(key==='hue'){if(delta>.5)delta-=1;if(delta<-.5)delta+=1;}this.motion[key]+=delta*(1-Math.exp(-dt*(key==='audioEnergy'?8:2.8)));}this.charge=(this.charge??0)+(Math.min(1,(s.layers?.length||0)/6)-(this.charge??0))*(1-Math.exp(-dt*3));
+    const beat=groove(s,t);this.loopPulse=(this.loopPulse||0)+(beat.energy-(this.loopPulse||0))*(1-Math.exp(-dt*10));
+    this.layerMix??=Array(8).fill(0);const layerOrder=['a','s','d','f','q','w','e','r'];for(let i=0;i<8;i++)this.layerMix[i]+=((s.layers?.includes(layerOrder[i])?1+(beat.voices[layerOrder[i]]||0)*.2:0)-this.layerMix[i])*(1-Math.exp(-dt*2));
+    if(this.gl){const g=this.gl;g.useProgram(this.program);g.bindTexture(g.TEXTURE_2D,this.texture);const style=entity?'entity':'floral';if(this.lastStyle!==style){g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,source);this.lastStyle=style;}g.uniform2f(this.loc.res,this.canvas.width,this.canvas.height);for(const [k,v]of Object.entries({time:t,level:s.intensity,hue:this.motion.hue,bloom:this.motion.bloom,style:entity?1:0,speed:this.motion.speed,fade,eyeClose:this.eyePosition,mouthOpen:this.mouthPosition,expansion:this.motion.expansion,nodes:this.motion.nodes,trance:this.motion.trance,cameraZoom:this.camZoom,audioEnergy:this.motion.audioEnergy,charge:this.charge,loopPulse:this.loopPulse||0,touch:s.touchEnergy||0,triggerTime:Math.max(0,s.time-(s.triggerAt??-100))}))g.uniform1f(this.loc[k],v);g.uniform4f(this.loc.layers1,...this.layerMix.slice(0,4));g.uniform4f(this.loc.layers2,...this.layerMix.slice(4));g.uniform2f(this.loc.camera,this.camX,this.camY);g.drawArrays(g.TRIANGLES,0,6);
     }else{const c=this.ctx,w=this.canvas.width,h=this.canvas.height;const dim=Math.min(w,h)*.95;c.clearRect(0,0,w,h);c.fillStyle='#010307';c.fillRect(0,0,w,h);c.save();c.globalAlpha=1-fade;c.translate(w/2,h/2);if(!entity)c.rotate(t*.025*s.speed);c.filter=`hue-rotate(${s.hue*360}deg) brightness(${.65+s.bloom*.7})`;if(entity)c.drawImage(source,0,0,source.width/2,source.height/2,-dim/2,-dim/2,dim,dim);else c.drawImage(source,-dim/2,-dim/2,dim,dim);c.restore();}
   }
 }

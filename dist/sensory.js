@@ -1,17 +1,19 @@
 export const NOTES={
-  a:{frequency:65.406,name:'Raíz',effect:'Luz cálida',wave:'sine',pan:-.65},
-  s:{frequency:77.782,name:'Flujo',effect:'Órbitas',wave:'sine',pan:-.4},
-  d:{frequency:98,name:'Materia',effect:'Nodos',wave:'triangle',pan:.15},
-  f:{frequency:116.541,name:'Profundidad',effect:'Cámara',wave:'sine',pan:.65},
-  q:{frequency:130.813,name:'Aura',effect:'Paleta',wave:'triangle',pan:-.75},
-  w:{frequency:155.563,name:'Onda',effect:'Geometría',wave:'sine',pan:-.2},
-  e:{frequency:195.998,name:'Mirada',effect:'Párpados',wave:'triangle',pan:.4},
-  r:{frequency:233.082,name:'Expansión',effect:'Halo',wave:'sine',pan:.8}
+  a:{frequency:522,name:'Centro',effect:'Aura dorada',wave:'sine',pan:-.18},
+  s:{frequency:396,name:'Flujo',effect:'Espirales líquidas',wave:'sine',pan:-.55},
+  d:{frequency:417,name:'Materia',effect:'Constelación',wave:'sine',pan:.4},
+  f:{frequency:639,name:'Profundidad',effect:'Túnel fractal',wave:'sine',pan:.65},
+  q:{frequency:285,name:'Prisma',effect:'Aurora de color',wave:'sine',pan:-.65},
+  w:{frequency:741,name:'Geometría',effect:'Cristales infinitos',wave:'sine',pan:-.35},
+  e:{frequency:852,name:'Mirada',effect:'Ojos y loto',wave:'sine',pan:.35},
+  r:{frequency:963,name:'Expansión',effect:'Ondas concéntricas',wave:'sine',pan:.18}
 };
 const cycle=(v,step,min,max)=>v+step>max?min:v+step;
 export function pressSense(s,key){
   if(!NOTES[key]||s.blackout||s.activeKeys.includes(key))return false;
   s.activeKeys.push(key);s.lastTone=key;s.triggerAt=s.time;s.gestures++;
+  s.layers??=[];
+  s.layers=s.layers.includes(key)?s.layers.filter(k=>k!==key):[...s.layers,key];
   if(key==='a'){s.hue=(s.hue+.065)%1;s.bloom=cycle(s.bloom,.12,.45,.9);}
   if(key==='s')s.speed=cycle(s.speed,.16,.15,.95);
   if(key==='d')s.nodes=cycle(s.nodes,.2,.3,1);

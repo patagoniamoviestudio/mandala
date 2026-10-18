@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#080c12"><meta name="description" content="MANDALA: un experimento audiovisual interactivo sobre obedecer, explorar y perder el control.">
-  <title>MANDALA — El experimento</title>
+  <meta name="theme-color" content="#030409"><meta name="description" content="Una experiencia sensorial de frecuencias, geometría y luz. Ocho teclas para componer tu propio viaje audiovisual.">
+  <title>MANDALA — Frecuencias</title>
   <link rel="icon" href="./mark.svg" type="image/svg+xml"><link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -15,7 +15,11 @@
   <main id="game" class="game-shell">
     <div class="scene" id="scene">
       <div class="sensory-tools"><button id="sensoryPause" aria-label="Pausar experiencia">Ⅱ</button><button id="openStudio" aria-label="Abrir estudio">⚙</button></div>
-      <div class="sensory-keybed" id="sensoryKeybed"><div><button data-sense="q" aria-label="Q">Q</button><button data-sense="w" aria-label="W">W</button><button data-sense="e" aria-label="E">E</button><button data-sense="r" aria-label="R">R</button></div><div><button data-sense="a" aria-label="A">A</button><button data-sense="s" aria-label="S">S</button><button data-sense="d" aria-label="D">D</button><button data-sense="f" aria-label="F">F</button></div></div>
+      <div class="sensory-keybed" id="sensoryKeybed" role="group" aria-label="Frecuencias y efectos visuales">
+        <div class="loop-display"><button id="loopToggle" aria-label="Desactivar pulso del loop" aria-pressed="true">∞</button><div id="loopSteps" aria-label="Ciclo rítmico de dieciséis pasos"></div></div><canvas id="frequencyScope" width="320" height="64" aria-label="Mezcla de frecuencias"></canvas>
+        <div class="frequency-keys"><div><button data-sense="q"><kbd>Q</kbd><small>285 Hz</small></button><button data-sense="w"><kbd>W</kbd><small>741 Hz</small></button><button data-sense="e"><kbd>E</kbd><small>852 Hz</small></button><button data-sense="r"><kbd>R</kbd><small>963 Hz</small></button></div><div><button data-sense="a"><kbd>A</kbd><small>522 Hz</small></button><button data-sense="s"><kbd>S</kbd><small>396 Hz</small></button><button data-sense="d"><kbd>D</kbd><small>417 Hz</small></button><button data-sense="f"><kbd>F</kbd><small>639 Hz</small></button></div></div>
+        <div class="frequency-mix"><output id="frequencyCount" aria-label="Capas sonoras activas">0 / 8</output><input id="sensoryVolume" type="range" min="0" max=".8" step=".01" value=".35" aria-label="Volumen de frecuencias"><button id="clearFrequencies" aria-label="Limpiar todas las frecuencias">↺</button></div>
+      </div>
       <div id="mediaLayer" class="media-layer"></div><canvas id="visual" aria-label="Visual audiovisual interactiva de MANDALA"></canvas>
       <div class="scene-vignette"></div><div class="blackout-layer" id="blackoutLayer"></div>
       <div class="scene-top"><span class="small-label"><i class="live-dot"></i> SALIDA EN VIVO <b>VISTA PREVIA</b></span><div><button id="fullscreen" class="scene-button" title="Pantalla completa">⛶ <span>Pantalla completa</span></button></div></div>

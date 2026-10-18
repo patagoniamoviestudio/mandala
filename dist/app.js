@@ -3,6 +3,7 @@ import {Visuals} from './visuals.js';
 import {Sound} from './audio.js';
 import {Voice} from './voice.js';
 import {NOTES,pressSense,releaseSense} from './sensory.js';
+import {groove} from './groove.js';
 const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
 const projectionMode=params.has('projection');
@@ -15,7 +16,7 @@ const voice=new Voice();let lastVoiceStage=-1;
 voice.onError=()=>toast('La voz no está disponible en este navegador. La animación facial sigue activa.');
 let voiceOptions='';voice.onVoices=()=>updateUI();
 const movementKeys=new Set();
-const inputHeld=new Set();
+const inputHeld=new Set();let sceneHeld=false;
 let visual;
 try{visual=new Visuals($('visual'));}catch(error){$('rendererLabel').textContent='Error de visual';toast('No se pudo iniciar la visual. Probá habilitar la aceleración gráfica.');console.error(error);}
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -23,7 +24,9 @@ document.body.classList.add('intro-mode');
 $('rendererLabel').innerHTML=visual?.gl?'WEBGL<span>VISUALES EN TIEMPO REAL</span>':'CANVAS 2D<span>COMPATIBILIDAD VISUAL</span>';
 $('timeline').innerHTML=STAGES.map((s,i)=>`<button class="phase" data-stage="${i}" aria-label="Ir a fase ${i+1}: ${s.name}"><small>0${i+1}</small><b>${s.name}</b><span class="phase-fill"></span></button>`).join('');
 $('instrumentKeys').innerHTML=Object.entries(NOTES).map(([k,n])=>`<button data-sense="${k}"><kbd>${k.toUpperCase()}</kbd><span>${n.name}<small>${n.effect} · ${Math.round(n.frequency)} Hz</small></span></button>`).join('');
+$('loopSteps').innerHTML=Array.from({length:16},(_,i)=>`<i data-step="${i}"></i>`).join('');
 $('startGame').innerHTML='<span aria-hidden="true">▶</span>';$('startGame').setAttribute('aria-label','Iniciar experiencia audiovisual');
+for(const b of document.querySelectorAll('[data-sense]')){const n=NOTES[b.dataset.sense];b.setAttribute('aria-label',b.dataset.sense.toUpperCase()+' · '+n.frequency+' Hz · '+n.effect);b.title=n.effect;}
 
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4200);}
 function notify(){if(channel&&!projectionMode)channel.postMessage({type:'state',state});}
@@ -44,13 +47,16 @@ async function start(){
   state.started=true;state.playing=true;lastTick=performance.now();
   document.body.classList.remove('intro-mode');
   // Web Audio is enabled only inside an explicit user action.
-  await enableAudio();updateUI();notify();requestAnimationFrame(()=>visual?.size());
+  if(state.sensory&&!studio&&!document.fullscreenElement)$('scene').requestFullscreen?.().catch(()=>{});
+  await enableAudio();syncFrequencies();updateUI();notify();requestAnimationFrame(()=>visual?.size());
 }
-function togglePlay(){if(!state.started){start();return;}state.playing=!state.playing;if(!state.playing)releaseEverything();lastTick=performance.now();updateUI();notify();}
+function syncFrequencies(){if(!state.sensory)return;for(const key of Object.keys(NOTES)){if(state.playing&&state.audioOn&&!state.blackout&&state.layers.includes(key)){if(!sound.keys.has(key))sound.noteOn(key);}else sound.noteOff(key);}}
+function clearFrequencies(){state.layers=[];state.eyesHeld=false;state.activeKeys=[];inputHeld.clear();sound.releaseAll();notify();updateUI();}
+function togglePlay(){if(!state.started){start();return;}state.playing=!state.playing;if(!state.playing)releaseEverything();else syncFrequencies();lastTick=performance.now();updateUI();notify();}
 function reset(){
   voice.stop();lastVoiceStage=-1;
   releaseEverything();
-  const settings={};for(const key of ['visual','hue','speed','bloom','volume','audioOn','duration','mode','mediaURL','mediaType','mediaName','mediaOpacity','expansion','nodes','trance','voiceOn','voiceName','sensory'])settings[key]=state[key];
+  const settings={};for(const key of ['visual','hue','speed','bloom','volume','audioOn','duration','mode','mediaURL','mediaType','mediaName','mediaOpacity','expansion','nodes','trance','voiceOn','voiceName','sensory','loopOn'])settings[key]=state[key];
   state=Object.assign(createState(),settings);sound.music.pause();sound.resumeMusic=false;if(sound.music.src)sound.music.currentTime=0;
   document.body.classList.toggle('intro-mode',!studio);updateUI();notify();
 }
@@ -61,12 +67,12 @@ function command(key){
 async function beginSense(key){
   if(projectionMode){inputHeld.add(key);channel?.postMessage({type:'senseDown',key});return;}
   if(inputHeld.has(key)||!NOTES[key])return;inputHeld.add(key);
-  if(!state.started)await start();else if(!state.playing){state.playing=true;lastTick=performance.now();await enableAudio();}
-  if(inputHeld.has(key)&&pressSense(state,key)){sound.noteOn(key);notify();updateUI();}
+  if(!state.started){if(key==='a')state.layers=state.layers.filter(k=>k!=='a');await start();}else if(!state.playing){state.playing=true;lastTick=performance.now();await enableAudio();}
+  if(inputHeld.has(key)&&pressSense(state,key)){syncFrequencies();notify();updateUI();}
 }
 function endSense(key){
   if(projectionMode){inputHeld.delete(key);channel?.postMessage({type:'senseUp',key});return;}
-  inputHeld.delete(key);releaseSense(state,key);sound.noteOff(key);notify();updateUI();
+  inputHeld.delete(key);releaseSense(state,key);notify();updateUI();
 }
 function releaseEverything(){if(projectionMode)for(const key of inputHeld)channel?.postMessage({type:'senseUp',key});inputHeld.clear();sound.releaseAll();state.activeKeys=[];notify();}
 function choose(value){if(state.stage!==3||state.choice||!state.playing)return;state.choice=value;
@@ -132,7 +138,9 @@ function updateUI(){
   $('nodeControls').hidden=!state.started||state.finished||studio||projectionMode||state.visual!=='entity';
   $('sensoryKeybed').hidden=!state.sensory||studio||projectionMode;
   $('sensoryPause').innerHTML=state.playing?'Ⅱ':'▶';$('sensoryPause').setAttribute('aria-label',state.playing?'Pausar experiencia':'Continuar experiencia');
-  document.querySelectorAll('[data-sense]').forEach(b=>{const active=state.activeKeys.includes(b.dataset.sense);b.classList.toggle('pressed',active);b.setAttribute('aria-pressed',String(active));});
+  document.querySelectorAll('[data-sense]').forEach(b=>{const active=state.layers.includes(b.dataset.sense);b.classList.toggle('pressed',active);b.setAttribute('aria-pressed',String(active));});
+  $('loopToggle').setAttribute('aria-pressed',String(state.loopOn));$('loopToggle').setAttribute('aria-label',state.loopOn?'Desactivar pulso del loop':'Activar pulso del loop');
+  $('frequencyCount').textContent=state.layers.length+' / 8';if(document.activeElement!==$('sensoryVolume'))$('sensoryVolume').value=state.volume;
   document.querySelectorAll('.orbit-node').forEach(b=>{const linked=state.linkedNodes.includes(Number(b.dataset.key));b.classList.toggle('linked',linked);b.classList.toggle('locked',state.stage>=4);b.querySelector('i').textContent=linked?'ENLAZADO':state.stage>=4?'BLOQUEADO':'ENLAZAR';b.disabled=linked||!state.playing;});
 }
 
@@ -144,13 +152,17 @@ if(projectionMode){
   setInterval(()=>{if(lastIncoming&&Date.now()-lastIncoming>3500){waiting.hidden=false;waiting.textContent='Conexión con el estudio interrumpida. Volvé a la ventana principal.';state.blackout=true;updateUI();}},1000);
 }else{
   $('studioView').onclick=()=>showView(true);$('playView').onclick=()=>showView(false);
+  $('loopToggle').onclick=()=>{state.loopOn=!state.loopOn;notify();updateUI();};
+  $('scene').addEventListener('pointerdown',e=>{if(!state.sensory||!state.playing||e.target.closest('button,input,.sensory-keybed'))return;sceneHeld=true;state.touchEnergy=1;state.triggerAt=state.time;notify();});
+  window.addEventListener('pointerup',()=>sceneHeld=false);window.addEventListener('pointercancel',()=>sceneHeld=false);
+  $('clearFrequencies').onclick=clearFrequencies;$('sensoryVolume').oninput=e=>{state.volume=Number(e.target.value);notify();updateUI();};
   $('openStudio').onclick=()=>showView(true);$('sensoryPause').onclick=togglePlay;
   $('startGame').onclick=start;$('replay').onclick=()=>{reset();start();};$('pauseGame').onclick=togglePlay;
   $('transportPlay').onclick=()=>{if(state.finished){reset();start();}else togglePlay();};$('reset').onclick=reset;
   $('audioToggle').onclick=toggleAudio;$('footerAudio').onclick=toggleAudio;
   $('voiceToggle').onclick=()=>{state.voiceOn=!state.voiceOn;lastVoiceStage=-1;voice.update(state);notify();updateUI();};
   $('voiceSelect').onchange=e=>{state.voiceName=e.target.value;lastVoiceStage=-1;voice.stop();notify();updateUI();};
-  $('scene').addEventListener('pointermove',e=>{if(!state.playing||studio)return;const r=$('scene').getBoundingClientRect();state.lookX=clamp((e.clientX-r.left)/r.width*2-1,-1,1);state.lookY=clamp(1-(e.clientY-r.top)/r.height*2,-1,1);});
+  $('scene').addEventListener('pointermove',e=>{if(!state.playing||studio)return;const r=$('scene').getBoundingClientRect();state.lookX=clamp((e.clientX-r.left)/r.width*2-1,-1,1);state.lookY=clamp(1-(e.clientY-r.top)/r.height*2,-1,1);if(sceneHeld)state.touchEnergy=1;});
   $('scene').addEventListener('pointerleave',()=>{state.lookX=0;state.lookY=0;});
   document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>command(b.dataset.key));
   document.querySelectorAll('[data-sense]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);beginSense(b.dataset.sense);};b.onpointerup=()=>endSense(b.dataset.sense);b.onpointercancel=()=>endSense(b.dataset.sense);b.onlostpointercapture=()=>endSense(b.dataset.sense);});
@@ -206,17 +218,18 @@ document.addEventListener('keydown',e=>{
   if(k==='f'){e.preventDefault();$('fullscreen').click();return;}
   if('iopxzcevb123'.includes(k)&&k.length===1){e.preventDefault();command(k);}
 });
-document.addEventListener('keyup',e=>{const k=e.key.toLowerCase();movementKeys.delete(k);if(NOTES[k])endSense(k);});window.addEventListener('blur',()=>{movementKeys.clear();releaseEverything();});
+document.addEventListener('keyup',e=>{const k=e.key.toLowerCase();movementKeys.delete(k);if(NOTES[k])endSense(k);});window.addEventListener('blur',()=>{movementKeys.clear();sceneHeld=false;releaseEverything();});
 // The narrative clock runs separately from rendering so a projection keeps progressing
 // when the controller tab is in the background.
-if(!projectionMode)setInterval(()=>{const now=performance.now();const dt=(now-lastTick)/1000;lastTick=now;if(state.playing){if(movementKeys.has('w'))state.cameraZoom=clamp(state.cameraZoom+dt*.8,-.8,.8);if(movementKeys.has('s'))state.cameraZoom=clamp(state.cameraZoom-dt*.8,-.8,.8);if(movementKeys.has('a'))state.lookX=clamp(state.lookX-dt*.8,-1,1);if(movementKeys.has('d'))state.lookX=clamp(state.lookX+dt*.8,-1,1);}tick(state,dt);sound.update(state,finalFade(state));voice.update(state);if(state.playing&&state.audioOn&&state.voiceOn&&state.visual==='entity'&&lastVoiceStage!==state.stage){lastVoiceStage=state.stage;speak(STAGES[state.stage].message);}updateUI();notify();},100);
+if(!projectionMode)setInterval(()=>{const now=performance.now();const dt=(now-lastTick)/1000;lastTick=now;if(state.playing){if(movementKeys.has('w'))state.cameraZoom=clamp(state.cameraZoom+dt*.8,-.8,.8);if(movementKeys.has('s'))state.cameraZoom=clamp(state.cameraZoom-dt*.8,-.8,.8);if(movementKeys.has('a'))state.lookX=clamp(state.lookX-dt*.8,-1,1);if(movementKeys.has('d'))state.lookX=clamp(state.lookX+dt*.8,-1,1);}tick(state,dt);if(state.playing)state.touchEnergy*=Math.exp(-dt*2.4);syncFrequencies();sound.update(state,finalFade(state));voice.update(state);if(state.playing&&state.audioOn&&state.voiceOn&&state.visual==='entity'&&lastVoiceStage!==state.stage){lastVoiceStage=state.stage;speak(STAGES[state.stage].message);}if(now-lastBroadcast>100){updateUI();notify();lastBroadcast=now;}},25);
 function frame(now){
   if(!projectionMode)voice.frame(state);
   if(!projectionMode)state.audioEnergy=sound.energy();
-  const t=projectionMode?state.time+(state.playing?Math.min((Date.now()-lastIncoming)/1000,.5):0):state.time;
+  const t=projectionMode?state.time+(state.playing?Math.min((Date.now()-lastIncoming)/1000,.5):0):state.time+(state.playing?Math.min((now-lastTick)/1000,.05):0);
   const idle=state.started?t:now/1000;
+  if(state.sensory&&!studio){const g=groove(state,t);for(const el of $('loopSteps').children){el.classList.toggle('on',Number(el.dataset.step)===g.step&&state.playing&&state.loopOn);el.classList.toggle('quarter',Number(el.dataset.step)%4===0);}}
   visual?.draw(state,reducedMotion?idle*.12:idle,finalFade(state));
-  if(studio&&now-lastUI>65){sound.waveform($('waveform'));lastUI=now;}
+  if(now-lastUI>65){if(studio)sound.waveform($('waveform'));else if(state.sensory){sound.waveform($('frequencyScope'));$('frequencyScope').dataset.energy=sound.energy().toFixed(4);}lastUI=now;}
   requestAnimationFrame(frame);
 }
 updateUI();requestAnimationFrame(frame);
